@@ -1,0 +1,418 @@
+<%- include('../partials/header', { title: 'Pengaturan - ACS Lite', activePage: 'settings' }) %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title fade-in">Pengaturan Jaringan & WhatsApp</h1>
+    <p class="page-subtitle fade-in">Konfigurasi koneksi API MikroTik untuk monitoring PPPoE dan aktifkan bot WhatsApp self-service</p>
+  </div>
+</div>
+
+<!-- ACS Integration URL Card -->
+<div class="glass-card fade-in" style="margin-bottom: 25px; border-left: 4px solid var(--color-primary);">
+  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 15px;">
+    <h2 style="font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0;">
+      <i class="bi bi-broadcast-pin" style="color: var(--color-primary);"></i> Informasi URL ACS TR-069 untuk ONU
+    </h2>
+  </div>
+  <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">
+    Gunakan URL di bawah ini untuk dikonfigurasikan pada pengaturan TR-069 / ACS di perangkat ONU pelanggan agar dapat terhubung secara otomatis ke server ini.
+  </p>
+  <div style="display: flex; gap: 10px; align-items: center; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); padding: 10px 15px;">
+    <span style="font-family: monospace; font-size: 14px; color: var(--color-info); flex: 1; user-select: all;" id="acsUrlText"><%= acsUrl %></span>
+    <button class="btn btn-secondary" onclick="copyAcsUrl()" style="padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; height: 32px;">
+      Salin URL <i class="bi bi-clipboard"></i>
+    </button>
+  </div>
+</div>
+
+<!-- General settings card -->
+<div class="glass-card fade-in" style="margin-bottom: 25px;">
+  <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px;">
+    <h2 style="font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+      <i class="bi bi-gear-fill"></i> Pengaturan Umum Aplikasi
+    </h2>
+  </div>
+  <form action="/admin/settings/general" method="POST">
+    <div class="settings-general-grid">
+      <div class="form-group">
+        <label for="companyHeader" class="form-label">Nama Perusahaan / Portal</label>
+        <input type="text" id="companyHeader" name="companyHeader" class="form-control" value="<%= generalSettings.companyHeader %>" required>
+      </div>
+      <div class="form-group">
+        <label for="timezone" class="form-label">Zona Waktu (Timezone)</label>
+        <select id="timezone" name="timezone" class="form-control form-select" required>
+          <option value="Asia/Jakarta" <%= generalSettings.timezone === 'Asia/Jakarta' ? 'selected' : '' %>>WIB (Asia/Jakarta)</option>
+          <option value="Asia/Makassar" <%= generalSettings.timezone === 'Asia/Makassar' ? 'selected' : '' %>>WITA (Asia/Makassar)</option>
+          <option value="Asia/Jayapura" <%= generalSettings.timezone === 'Asia/Jayapura' ? 'selected' : '' %>>WIT (Asia/Jayapura)</option>
+          <option value="UTC" <%= generalSettings.timezone === 'UTC' ? 'selected' : '' %>>UTC</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sessionSecret" class="form-label">Secret Sesi Web (Session Secret)</label>
+        <input type="text" id="sessionSecret" name="sessionSecret" class="form-control" value="<%= generalSettings.sessionSecret %>" required>
+      </div>
+    </div>
+    <div style="text-align: right; margin-top: 10px;">
+      <button type="submit" class="btn btn-primary">
+        Simpan Pengaturan Umum <i class="bi bi-save"></i>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- GenieACS Integration Card -->
+<div class="glass-card fade-in" style="margin-bottom: 25px;">
+  <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+    <h2 style="font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0;">
+      <i class="bi bi-link-45deg" style="color: var(--color-info);"></i> Integrasi Server GenieACS Eksternal (TR-069)
+    </h2>
+    <span class="badge <%= genieacsSettings.enabled === 1 ? 'badge-success' : 'badge-danger' %>">
+      <%= genieacsSettings.enabled === 1 ? 'Aktif' : 'Nonaktif' %>
+    </span>
+  </div>
+  
+  <form action="/admin/settings/genieacs" method="POST">
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+      <div class="form-group" style="margin: 0; display: flex; align-items: center;">
+        <label class="form-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+          <input type="checkbox" name="enabled" value="1" <%= genieacsSettings.enabled === 1 ? 'checked' : '' %> style="accent-color: var(--color-primary); width: 18px; height: 18px;">
+          Gunakan GenieACS Eksternal
+        </label>
+      </div>
+      <div class="form-group" style="margin: 0;">
+        <label for="genieacs_url" class="form-label">URL REST API / NBI GenieACS</label>
+        <input type="url" id="genieacs_url" name="url" class="form-control" placeholder="http://localhost:7557" value="<%= genieacsSettings.url %>" required>
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; border-top: 1px solid var(--glass-border); padding-top: 15px;">
+      <button type="button" class="btn btn-secondary" onclick="testGenieAcs()" style="padding: 10px 18px;">
+        Uji Koneksi GenieACS <i class="bi bi-broadcast"></i>
+      </button>
+      <button type="submit" class="btn btn-primary" style="padding: 10px 18px;">
+        Simpan Setelan GenieACS <i class="bi bi-save"></i>
+      </button>
+    </div>
+  </form>
+  
+  <div id="genieacsTestResult" class="alert" style="display: none; margin-top: 15px; padding: 10px 15px;"></div>
+</div>
+
+
+<div class="settings-columns-grid fade-in">
+  
+  <!-- Left Column: MikroTik configuration -->
+  <div class="glass-card">
+    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px;">
+      <h2 style="font-size: 16px; font-weight: 600;">
+        <i class="bi bi-router"></i> Integrasi API MikroTik
+      </h2>
+      <span class="badge <%= mtSettings.enabled === 1 ? 'badge-success' : 'badge-danger' %>">
+        <%= mtSettings.enabled === 1 ? 'Aktif' : 'Nonaktif' %>
+      </span>
+    </div>
+
+    <form action="/admin/settings/mikrotik" method="POST" id="mtForm">
+      <div class="form-group">
+        <label class="form-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 15px;">
+          <input type="checkbox" name="enabled" value="1" <%= mtSettings.enabled === 1 ? 'checked' : '' %> style="accent-color: var(--color-primary); width: 16px; height: 16px;">
+          Aktifkan PPPoE Monitoring & Auto-Secret
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="host" class="form-label">Host IP / Domain MikroTik</label>
+        <input type="text" id="host" name="host" class="form-control" placeholder="Contoh: 192.168.1.1" value="<%= mtSettings.host %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="port" class="form-label">Port API (default: 8728, secure: 8729)</label>
+        <input type="number" id="port" name="port" class="form-control" placeholder="8728" value="<%= mtSettings.port %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="user" class="form-label">Username API MikroTik</label>
+        <input type="text" id="user" name="user" class="form-control" placeholder="admin_api" value="<%= mtSettings.user %>" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 25px;">
+        <label for="password" class="form-label">Password API MikroTik</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Kosongkan jika tidak diganti" value="<%= mtSettings.password ? '••••••••' : '' %>">
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="testMikrotik()" style="flex: 1;">
+          Uji Koneksi <i class="bi bi-broadcast"></i>
+        </button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">
+          Simpan Setelan <i class="bi bi-save"></i>
+        </button>
+      </div>
+    </form>
+    
+    <div id="mtTestResult" class="alert" style="display: none; margin-top: 15px; padding: 10px 15px;"></div>
+  </div>
+
+  <!-- Right Column: WhatsApp Bot configuration -->
+  <div class="glass-card" style="display: flex; flex-direction: column;">
+    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px;">
+      <h2 style="font-size: 16px; font-weight: 600;">
+        <i class="bi bi-whatsapp"></i> WhatsApp Bot Self-Service (Baileys)
+      </h2>
+      
+      <span id="waStatusBadge" class="badge <% if (waStatus === 'open') { %>badge-success<% } else if (waStatus === 'connecting') { %>badge-info<% } else if (waStatus === 'qr') { %>badge-warning<% } else { %>badge-danger<% } %>">
+        <% if (waStatus === 'open') { %>Terhubung<% } else if (waStatus === 'connecting') { %>Menghubungkan...<% } else if (waStatus === 'qr') { %>Scan QR Code<% } else { %>Terputus<% } %>
+      </span>
+    </div>
+
+    <form action="/admin/settings/whatsapp" method="POST" style="margin-bottom: 25px;">
+      <div class="form-group" style="margin-bottom: 25px;">
+        <label class="form-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" name="enabled" value="1" <%= waEnabled === 1 ? 'checked' : '' %> onchange="this.form.submit()" style="accent-color: var(--color-primary); width: 16px; height: 16px;">
+          Aktifkan Layanan Bot WhatsApp
+        </label>
+      </div>
+    </form>
+
+    <div id="waBotContainer" style="flex: 1; display: flex; flex-direction: column;">
+      <% if (waEnabled === 1) { %>
+        <div id="waActiveArea" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.15); border-radius: var(--border-radius-md); padding: 25px; border: 1px solid var(--glass-border);">
+          
+          <!-- State 1: QR -->
+          <div id="waStateQR" style="display: <%= waStatus === 'qr' ? 'flex' : 'none' %>; text-align: center; flex-direction: column; align-items: center; gap: 15px;">
+            <p style="font-size: 14px; color: var(--text-secondary);">Pindai kode QR di bawah dengan aplikasi WhatsApp Anda:</p>
+            <div style="background: white; padding: 15px; border-radius: var(--border-radius-md); box-shadow: var(--shadow-lg);">
+              <canvas id="qrCanvas"></canvas>
+            </div>
+            <p style="font-size: 11px; color: var(--text-secondary); max-width: 250px;">QR Code akan otomatis berganti jika sudah usang. Bot terhubung secara otomatis setelah di-scan.</p>
+          </div>
+
+          <!-- State 2: Connected/Open -->
+          <div id="waStateOpen" style="display: <%= waStatus === 'open' ? 'flex' : 'none' %>; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px; color: var(--color-success);">
+            <i class="bi bi-patch-check-fill" style="font-size: 64px;"></i>
+            <div>
+              <h3 style="color: var(--text-primary);">WhatsApp Bot Aktif</h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 5px;">Bot siap menerima pesan dan melayani keluhan Wi-Fi pelanggan.</p>
+            </div>
+          </div>
+
+          <!-- State 3: Connecting -->
+          <div id="waStateConnecting" style="display: <%= waStatus === 'connecting' ? 'flex' : 'none' %>; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px; color: var(--color-info);">
+            <div style="width: 40px; height: 40px; border: 4px solid var(--glass-border); border-top-color: var(--color-info); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="font-size: 14px; color: var(--text-secondary);">Membangun koneksi ke server WhatsApp...</p>
+          </div>
+
+          <!-- State 4: Closed / Error -->
+          <div id="waStateClosed" style="display: <%= (waStatus !== 'qr' && waStatus !== 'open' && waStatus !== 'connecting') ? 'flex' : 'none' %>; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px; color: var(--text-secondary);">
+            <i class="bi bi-x-circle-fill" style="font-size: 64px; color: var(--color-danger);"></i>
+            <div>
+              <h3 style="color: var(--text-primary);">Bot Terputus</h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 5px;">Koneksi terputus. Klik tombol di bawah untuk memulai ulang.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 25px; width: 100%;">
+            <form action="/admin/settings/whatsapp/restart" method="POST" style="flex: 1;">
+              <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                Restart Bot <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </form>
+            
+            <form action="/admin/settings/whatsapp/logout" method="POST" style="flex: 1;" onsubmit="return confirm('Apakah Anda yakin ingin logout dan menghapus sesi WhatsApp?');">
+              <button type="submit" class="btn btn-danger" style="width: 100%;">
+                Hapus Sesi <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+
+        </div>
+      <% } else { %>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); padding: 40px 0;">
+          <i class="bi bi-whatsapp" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+          <p>Layanan Bot WhatsApp dinonaktifkan.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+</div>
+
+<!-- Client-side QRCode generation library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+
+<script>
+  // Copy ACS URL helper
+  function copyAcsUrl() {
+    const urlText = document.getElementById('acsUrlText').innerText;
+    navigator.clipboard.writeText(urlText).then(() => {
+      // Temporary custom alert
+      const btn = document.querySelector('[onclick="copyAcsUrl()"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Disalin! <i class="bi bi-check-lg"></i>';
+      btn.className = 'btn btn-primary';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.className = 'btn btn-secondary';
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+    });
+  }
+
+  // Spin animation
+  const style = document.createElement('style');
+  style.innerHTML = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
+  document.head.appendChild(style);
+
+  let currentStatus = '<%= waStatus %>';
+  let currentQR = '<%= waQR %>';
+
+  function renderQR(qrString) {
+    const canvas = document.getElementById('qrCanvas');
+    if (qrString && qrString !== 'null' && canvas) {
+      QRCode.toCanvas(canvas, qrString, { 
+        width: 200,
+        margin: 1,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      }, function (error) {
+        if (error) console.error(error);
+      });
+    }
+  }
+
+  function pollWhatsAppStatus() {
+    fetch('/admin/settings/whatsapp/status')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.enabled) return;
+
+        // Update badge
+        const badge = document.getElementById('waStatusBadge');
+        if (badge) {
+          badge.className = 'badge';
+          if (data.status === 'open') {
+            badge.classList.add('badge-success');
+            badge.innerText = 'Terhubung';
+          } else if (data.status === 'connecting') {
+            badge.classList.add('badge-info');
+            badge.innerText = 'Menghubungkan...';
+          } else if (data.status === 'qr') {
+            badge.classList.add('badge-warning');
+            badge.innerText = 'Scan QR Code';
+          } else {
+            badge.classList.add('badge-danger');
+            badge.innerText = 'Terputus';
+          }
+        }
+
+        // Toggle state displays
+        const stateQR = document.getElementById('waStateQR');
+        const stateOpen = document.getElementById('waStateOpen');
+        const stateConnecting = document.getElementById('waStateConnecting');
+        const stateClosed = document.getElementById('waStateClosed');
+
+        if (stateQR && stateOpen && stateConnecting && stateClosed) {
+          if (data.status !== currentStatus || data.qr !== currentQR) {
+            currentStatus = data.status;
+            currentQR = data.qr;
+
+            stateQR.style.display = data.status === 'qr' ? 'flex' : 'none';
+            stateOpen.style.display = data.status === 'open' ? 'flex' : 'none';
+            stateConnecting.style.display = data.status === 'connecting' ? 'flex' : 'none';
+            stateClosed.style.display = (data.status !== 'qr' && data.status !== 'open' && data.status !== 'connecting') ? 'flex' : 'none';
+
+            if (data.status === 'qr' && data.qr) {
+              renderQR(data.qr);
+            }
+          }
+        }
+      })
+      .catch(err => console.error('Error polling WhatsApp status:', err));
+  }
+
+  // Render QR on page load if present, and start polling
+  document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById('qrCanvas');
+    if (currentQR && currentQR !== 'null' && canvas) {
+      renderQR(currentQR);
+    }
+    
+    // Poll WhatsApp status every 3 seconds
+    setInterval(pollWhatsAppStatus, 3000);
+  });
+
+  // AJAX test MikroTik connection
+  function testMikrotik() {
+    const resDiv = document.getElementById('mtTestResult');
+    resDiv.style.display = 'block';
+    resDiv.className = 'alert alert-info';
+    resDiv.innerHTML = '<div style="display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,0.2); border-top-color:white; border-radius:50%; animation:spin 1s linear infinite; margin-right:8px;"></div> Sedang menguji koneksi...';
+
+    const formData = new FormData(document.getElementById('mtForm'));
+    const data = {};
+    formData.forEach((val, key) => {
+      data[key] = val;
+    });
+
+    fetch('/admin/settings/mikrotik/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => {
+      if (result.success) {
+        resDiv.className = 'alert alert-success';
+        resDiv.innerHTML = '<i class="bi bi-check-circle-fill"></i> Uji koneksi berhasil! Terhubung ke router: <strong>' + result.identity + '</strong>';
+      } else {
+        resDiv.className = 'alert alert-danger';
+        resDiv.innerHTML = '<i class="bi bi-x-circle-fill"></i> Koneksi gagal: ' + result.message;
+      }
+    })
+    .catch(err => {
+      resDiv.className = 'alert alert-danger';
+      resDiv.innerHTML = '<i class="bi bi-x-circle-fill"></i> Terjadi kesalahan AJAX: ' + err.message;
+    });
+  }
+
+  // AJAX test GenieACS connection
+  function testGenieAcs() {
+    const resDiv = document.getElementById('genieacsTestResult');
+    resDiv.style.display = 'block';
+    resDiv.className = 'alert alert-info';
+    resDiv.innerHTML = '<div style="display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,0.2); border-top-color:white; border-radius:50%; animation:spin 1s linear infinite; margin-right:8px;"></div> Sedang menguji koneksi...';
+
+    const url = document.getElementById('genieacs_url').value;
+
+    fetch('/admin/settings/genieacs/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ url })
+    })
+    .then(res => res.json())
+    .then(result => {
+      if (result.success) {
+        resDiv.className = 'alert alert-success';
+        resDiv.innerHTML = '<i class="bi bi-check-circle-fill"></i> ' + result.message;
+      } else {
+        resDiv.className = 'alert alert-danger';
+        resDiv.innerHTML = '<i class="bi bi-x-circle-fill"></i> ' + result.message;
+      }
+    })
+    .catch(err => {
+      resDiv.className = 'alert alert-danger';
+      resDiv.innerHTML = '<i class="bi bi-x-circle-fill"></i> Terjadi kesalahan AJAX: ' + err.message;
+    });
+  }
+</script>
+
+<%- include('../partials/footer') %>

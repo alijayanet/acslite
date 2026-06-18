@@ -1,0 +1,401 @@
+<%- include('../partials/header', { title: 'Detail ONU - ACS Lite', activePage: 'devices' }) %>
+
+<div class="page-header">
+  <div>
+    <a href="/admin/devices" style="color: var(--text-secondary); text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;">
+      <i class="bi bi-chevron-left"></i> Kembali ke Daftar ONU
+    </a>
+    <h1 class="page-title fade-in">
+      ONU: <%= device.serial_number %> 
+      <% if (device.online) { %>
+        <span class="badge badge-success" style="font-size: 13px; padding: 4px 10px; margin-left: 10px;"><i class="bi bi-circle-fill" style="font-size: 6px; margin-right: 4px;"></i> Online</span>
+      <% } else { %>
+        <span class="badge badge-danger" style="font-size: 13px; padding: 4px 10px; margin-left: 10px;"><i class="bi bi-circle-fill" style="font-size: 6px; margin-right: 4px;"></i> Offline</span>
+      <% } %>
+    </h1>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="fade-in" style="display: flex; gap: 10px;">
+    <form action="/admin/devices/<%= device.id %>/task" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin melakukan REBOOT perangkat ini?');">
+      <input type="hidden" name="taskName" value="reboot">
+      <button type="submit" class="btn btn-secondary">
+        <i class="bi bi-arrow-clockwise"></i> Reboot
+      </button>
+    </form>
+    
+    <form action="/admin/devices/<%= device.id %>/task" method="POST" onsubmit="return confirm('APAKAH ANDA YAKIN INGIN MELAKUKAN FACTORY RESET PERANGKAT INI? Semua pengaturan akan dihapus!');">
+      <input type="hidden" name="taskName" value="factoryReset">
+      <button type="submit" class="btn btn-danger">
+        <i class="bi bi-exclamation-triangle"></i> Factory Reset
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="device-details-grid fade-in">
+  
+  <!-- Left Column: Specs & Dynamic Parameters -->
+  <div style="display: flex; flex-direction: column; gap: 25px;">
+    
+    <!-- Device Specs Card -->
+    <div class="glass-card">
+      <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+        <i class="bi bi-info-circle"></i> Spesifikasi Perangkat
+      </h2>
+      <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; font-size: 14px;">
+        <span style="color: var(--text-secondary);">Brand / Pabrikan:</span>
+        <strong><%= device.manufacturer %></strong>
+
+        <span style="color: var(--text-secondary);">Model / Kelas:</span>
+        <strong><%= device.product_class %></strong>
+
+        <span style="color: var(--text-secondary);">OUI:</span>
+        <span style="font-family: monospace;"><%= device.oui %></span>
+
+        <span style="color: var(--text-secondary);">Software Version:</span>
+        <strong style="color: var(--color-info);"><%= device.software_version || 'N/A' %></strong>
+
+        <span style="color: var(--text-secondary);">Hardware Version:</span>
+        <strong><%= device.hardware_version || 'N/A' %></strong>
+
+        <span style="color: var(--text-secondary);">IP Address:</span>
+        <span style="font-family: monospace; font-weight: 600;"><%= device.ip_address %></span>
+
+        <span style="color: var(--text-secondary);">Uptime System:</span>
+        <strong>
+          <% if (vParams.Uptime) { 
+            const upt = parseInt(vParams.Uptime, 10);
+            const d = Math.floor(upt / (3600*24));
+            const h = Math.floor((upt % (3600*24)) / 3600);
+            const m = Math.floor((upt % 3600) / 60);
+            const s = upt % 60;
+            if (d > 0) { %>
+              <%= d %> Hari <%= h %> Jam <%= m %> Menit
+            <% } else { %>
+              <%= h %> Jam <%= m %> Menit <%= s %> Detik
+            <% } 
+          } else { %>
+            N/A
+          <% } %>
+        </strong>
+
+        <span style="color: var(--text-secondary);">Last Inform:</span>
+        <span style="font-size: 13px;"><%= device.last_inform %></span>
+      </div>
+    </div>
+
+    <!-- Dynamic Virtual Parameters Card -->
+    <div class="glass-card">
+      <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+        <i class="bi bi-sliders"></i> Parameter Virtual Dinamis
+      </h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <% for (const [key, val] of Object.entries(vParams)) { %>
+          <% if (key === 'Uptime' || key === 'ModelName' || key === 'SoftwareVersion' || key === 'HardwareVersion') continue; %>
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); padding: 12px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 13px; color: var(--text-secondary); font-weight: 500;"><%= key %></span>
+              <span style="font-family: monospace; font-size: 11px; opacity: 0.5;" title="TR-069 node path"><%= resolvedPathMap[key] || 'Not found' %></span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <% if (key === 'RxPower') { 
+                const rxVal = parseFloat(val);
+                let rxClass = '';
+                if (!isNaN(rxVal)) {
+                  if (rxVal < -27) rxClass = 'color: var(--color-danger);';
+                  else if (rxVal < -24) rxClass = 'color: var(--color-warning);';
+                  else rxClass = 'color: var(--color-success);';
+                }
+              %>
+                <strong style="font-size: 18px; <%= rxClass %>"><%= val ? val + ' dBm' : 'N/A' %></strong>
+              <% } else if (key.toLowerCase().includes('pass')) { %>
+                <strong style="font-family: monospace; font-size: 15px;">••••••••</strong>
+              <% } else { %>
+                <strong style="font-size: 15px;"><%= val || 'N/A' %></strong>
+              <% } %>
+
+              <!-- Edit option if parameter has a mapped path -->
+              <% if (resolvedPathMap[key]) { %>
+                <button type="button" class="btn btn-secondary" onclick="openEditModal('<%= key %>', '<%= val %>', '<%= resolvedPathMap[key] %>')" style="padding: 4px 8px; font-size: 12px; gap: 4px;">
+                  <i class="bi bi-pencil"></i> Edit
+                </button>
+              <% } %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Column: WAN Connection Provisioner (Add WAN) -->
+  <div style="display: flex; flex-direction: column; gap: 25px;">
+    
+    <div class="glass-card">
+      <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+        <i class="bi bi-broadcast"></i> Provisioning WAN Connection (Add WAN)
+      </h2>
+
+      <form action="/admin/devices/<%= device.id %>/provision" method="POST">
+        <div class="form-group">
+          <label for="mode" class="form-label">Mode Koneksi</label>
+          <select id="mode" name="mode" class="form-control form-select" onchange="toggleProvisionInputs()" required>
+            <option value="pppoe" selected>PPPoE (Router)</option>
+            <option value="dhcp">DHCP (IPoe - Router)</option>
+            <option value="bridge">Bridge (Bridged Connection)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="vlan" class="form-label">VLAN ID (Kosongkan jika tidak memakai VLAN)</label>
+          <input type="number" id="vlan" name="vlan" class="form-control" placeholder="Contoh: 100" min="0" max="4094">
+        </div>
+
+        <!-- PPPoE fields -->
+        <div id="pppoe-fields">
+          <div class="form-group">
+            <label for="username" class="form-label">Username PPPoE</label>
+            <input type="text" id="username" name="username" class="form-control" placeholder="username_pelanggan">
+          </div>
+          <div class="form-group">
+            <label for="password" class="form-label">Password PPPoE</label>
+            <input type="text" id="password" name="password" class="form-control" placeholder="password_pelanggan">
+          </div>
+        </div>
+
+        <!-- Interface Binding -->
+        <div class="form-group">
+          <label class="form-label">Binding Port LAN</label>
+          <div class="port-binding-grid">
+            <% for (let i = 1; i <= 4; i++) { %>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" name="bindPorts" value="LAN<%= i %>" checked style="accent-color: var(--color-primary);"> LAN <%= i %>
+              </label>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 25px;">
+          <label class="form-label">Binding Wi-Fi SSID</label>
+          <div style="display: flex; gap: 20px; margin-top: 5px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+              <input type="checkbox" name="bindPorts" value="SSID1" checked style="accent-color: var(--color-primary);"> SSID 1 (2.4G)
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+              <input type="checkbox" name="bindPorts" value="SSID5" checked style="accent-color: var(--color-primary);"> SSID 5 (5G)
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          Kirim Task Provisioning <i class="bi bi-send"></i>
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Tabs area for logs and details -->
+<div class="tab-container fade-in">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(event, 'tasks-tab')">Antrian Task (<%= tasks.length %>)</button>
+    <button class="tab-btn" onclick="switchTab(event, 'faults-tab')">Device Faults (<%= faults.length %>)</button>
+    <button class="tab-btn" onclick="switchTab(event, 'raw-tab')">Parameter Raw TR-069</button>
+  </div>
+
+  <!-- Tasks Tab -->
+  <div id="tasks-tab" class="tab-panel active">
+    <div class="glass-card" style="padding: 0;">
+      <% if (tasks.length === 0) { %>
+        <div style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+          Tidak ada task antrian untuk perangkat ini.
+        </div>
+      <% } else { %>
+        <div class="table-container" style="border: none; margin-bottom: 0;">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>ID Task</th>
+                <th>Nama Task</th>
+                <th>Status</th>
+                <th>Payload (Parameter)</th>
+                <th>Mulai / Update</th>
+                <th>Hasil Output</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const task of tasks) { %>
+                <tr>
+                  <td style="font-family: monospace;"><%= task.id %></td>
+                  <td><strong><%= task.name %></strong></td>
+                  <td>
+                    <% if (task.status === 'completed') { %>
+                      <span class="badge badge-success">Selesai</span>
+                    <% } else if (task.status === 'pending') { %>
+                      <span class="badge badge-warning">Menunggu</span>
+                    <% } else if (task.status === 'in_progress') { %>
+                      <span class="badge badge-info">Berjalan</span>
+                    <% } else { %>
+                      <span class="badge badge-danger">Gagal</span>
+                    <% } %>
+                  </td>
+                  <td style="font-family: monospace; font-size: 11px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= task.payload %>">
+                    <%= task.payload %>
+                  </td>
+                  <td style="font-size: 12px; color: var(--text-secondary);">
+                    <%= task.updated_at %>
+                  </td>
+                  <td style="font-family: monospace; font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= task.result %>">
+                    <%= task.result || '-' %>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Faults Tab -->
+  <div id="faults-tab" class="tab-panel">
+    <div class="glass-card" style="padding: 0;">
+      <% if (faults.length === 0) { %>
+        <div style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+          Bebas dari fault. Perangkat sehat!
+        </div>
+      <% } else { %>
+        <div class="table-container" style="border: none; margin-bottom: 0;">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Kode Fault</th>
+                <th>Deskripsi Pesan</th>
+                <th>Frekuensi</th>
+                <th>Terjadi Pertama</th>
+                <th>Terjadi Terakhir</th>
+                <th>Task ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const fault of faults) { %>
+                <tr>
+                  <td style="font-family: monospace; color: var(--color-danger); font-weight: 600;"><%= fault.fault_code %></td>
+                  <td style="font-size: 13px;"><%= fault.fault_string %></td>
+                  <td><%= fault.seen_count %> kali</td>
+                  <td style="font-size: 12px; color: var(--text-secondary);"><%= fault.first_seen %></td>
+                  <td style="font-size: 12px; color: var(--text-secondary);"><%= fault.last_seen %></td>
+                  <td style="font-family: monospace;"><%= fault.task_id || '-' %></td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Raw Tree Tab -->
+  <div id="raw-tab" class="tab-panel">
+    <div class="glass-card">
+      <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 15px; font-weight: 600;">Full Object Tree Cached</h3>
+        <input type="text" id="rawSearch" class="form-control" placeholder="Filter parameter path..." onkeyup="filterRawTree()" style="max-width: 300px; padding: 6px 12px;">
+      </div>
+      
+      <div class="raw-tree" id="rawTreeContainer">
+        <% for (const [key, val] of Object.entries(rawParams)) { %>
+          <div class="raw-line" data-path="<%= key.toLowerCase() %>">
+            <span class="raw-key"><%= key %></span>
+            <span class="raw-val"><%= val %></span>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Parameter Modal Overlay -->
+<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center;">
+  <div class="glass-card" style="width: 100%; max-width: 500px;">
+    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 15px;" id="modalTitle">Edit Parameter</h3>
+    <form action="/admin/devices/<%= device.id %>/update-param" method="POST" id="editForm">
+      <input type="hidden" name="paramName" id="modalParamName">
+      
+      <div class="form-group">
+        <label class="form-label" id="modalParamPathLabel">TR-069 Path</label>
+        <input type="text" id="modalParamPath" class="form-control" style="background: rgba(0,0,0,0.1); opacity: 0.7; font-family: monospace; font-size: 12px;" readonly>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 25px;">
+        <label for="modalParamValue" class="form-label">Value Baru</label>
+        <input type="text" name="paramValue" id="modalParamValue" class="form-control" required>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan Ke Perangkat</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+  function switchTab(evt, tabId) {
+    const panels = document.querySelectorAll('.tab-panel');
+    panels.forEach(p => p.classList.remove('active'));
+    
+    const btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(b => b.classList.remove('active'));
+
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+  }
+
+  function toggleProvisionInputs() {
+    const mode = document.getElementById('mode').value;
+    const pppoeFields = document.getElementById('pppoe-fields');
+    if (mode === 'pppoe') {
+      pppoeFields.style.display = 'block';
+    } else {
+      pppoeFields.style.display = 'none';
+    }
+  }
+
+  function filterRawTree() {
+    const query = document.getElementById('rawSearch').value.toLowerCase();
+    const lines = document.querySelectorAll('#rawTreeContainer .raw-line');
+    lines.forEach(line => {
+      const path = line.getAttribute('data-path');
+      if (path.includes(query)) {
+        line.style.display = 'flex';
+      } else {
+        line.style.display = 'none';
+      }
+    });
+  }
+
+  function openEditModal(name, value, path) {
+    document.getElementById('modalTitle').innerText = 'Edit ' + name;
+    document.getElementById('modalParamName').value = name;
+    document.getElementById('modalParamPath').value = path;
+    document.getElementById('modalParamValue').value = value;
+    document.getElementById('editModal').style.display = 'flex';
+    document.getElementById('modalParamValue').focus();
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+  }
+
+  // Initial trigger run
+  toggleProvisionInputs();
+</script>
+
+<%- include('../partials/footer') %>

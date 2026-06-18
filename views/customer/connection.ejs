@@ -1,0 +1,63 @@
+<%- include('../partials/header', { title: 'Status Koneksi - ACS Lite', activePage: 'connection' }) %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title fade-in">Status Koneksi</h1>
+    <p class="page-subtitle fade-in">Pantau status online dan informasi perangkat ONT Anda</p>
+  </div>
+</div>
+
+<% if (error) { %>
+  <div class="alert alert-danger fade-in">
+    <i class="bi bi-exclamation-triangle-fill"></i> <%= error %>
+  </div>
+<% } else { %>
+
+  <div class="fade-in">
+    <!-- Info Koneksi Card (Always visible on all screen sizes) -->
+    <div class="glass-card" style="padding: 24px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0;">
+          <i class="bi bi-info-circle"></i> Info Koneksi ONT
+        </h2>
+        <% if (device.online) { %>
+          <span class="badge badge-success" style="font-size: 12px; padding: 6px 14px;"><i class="bi bi-circle-fill" style="font-size: 7px; margin-right: 6px;"></i> Aktif</span>
+        <% } else { %>
+          <span class="badge badge-danger" style="font-size: 12px; padding: 6px 14px;"><i class="bi bi-circle-fill" style="font-size: 7px; margin-right: 6px;"></i> Terputus</span>
+        <% } %>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px 12px; font-size: 14px;">
+        <span style="color: var(--text-secondary);">Brand Perangkat:</span>
+        <strong style="text-align: right;"><%= device.manufacturer %></strong>
+
+        <span style="color: var(--text-secondary);">Model ONT:</span>
+        <strong style="text-align: right;"><%= device.product_class %></strong>
+
+        <span style="color: var(--text-secondary);">Redaman Kabel (Rx):</span>
+        <% 
+          const rxVal = parseFloat(vParams.RxPower);
+          let rxClass = 'color: var(--text-primary); text-align: right;';
+          if (!isNaN(rxVal)) {
+            if (rxVal < -27) rxClass = 'color: var(--color-danger); font-weight: 600; text-align: right;';
+            else if (rxVal < -24) rxClass = 'color: var(--color-warning); font-weight: 600; text-align: right;';
+            else rxClass = 'color: var(--color-success); font-weight: 600; text-align: right;';
+          }
+        %>
+        <strong style="<%= rxClass %>"><%= vParams.RxPower ? vParams.RxPower + ' dBm' : 'N/A' %></strong>
+
+        <span style="color: var(--text-secondary);">IP Internet:</span>
+        <strong style="font-family: monospace; text-align: right;"><%= vParams.ExternalIP || device.ip_address %></strong>
+
+        <span style="color: var(--text-secondary);">Serial Number:</span>
+        <strong style="font-family: monospace; text-align: right; color: var(--color-info);"><%= device.serial_number %></strong>
+
+        <span style="color: var(--text-secondary);">Terakhir Terhubung:</span>
+        <strong style="text-align: right;"><%= new Date(device.updated_at).toLocaleString('id-ID') %></strong>
+      </div>
+    </div>
+  </div>
+
+<% } %>
+
+<%- include('../partials/footer') %>

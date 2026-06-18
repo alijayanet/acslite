@@ -1,0 +1,185 @@
+<%- include('../partials/header', { title: 'Manajemen Pengguna - ACS Lite', activePage: 'users' }) %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title fade-in">Manajemen Pengguna & Pelanggan</h1>
+    <p class="page-subtitle fade-in">Kelola akun login Administrator dan tautkan akun login pelanggan ke ONU mereka masing-masing</p>
+  </div>
+</div>
+
+<div class="dashboard-grid grid-mobile-reverse fade-in">
+
+  <!-- Left Side: Users list table -->
+  <div class="glass-card" style="padding: 0;">
+    <div class="table-container" style="border: none; margin-bottom: 0;">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Nama Lengkap</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>No. WhatsApp</th>
+            <th>Tautan Perangkat ONU (SN)</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (const usr of users) { %>
+            <tr>
+              <td>
+                <strong style="color: var(--text-primary);"><%= usr.name %></strong>
+              </td>
+              <td style="font-family: monospace;"><%= usr.username %></td>
+              <td>
+                <% if (usr.role === 'admin') { %>
+                  <span class="badge badge-success">Administrator</span>
+                <% } else { %>
+                  <span class="badge badge-info">Pelanggan</span>
+                <% } %>
+              </td>
+              <td style="font-family: monospace;"><%= usr.phone ? '+' + usr.phone : '-' %></td>
+              <td>
+                <% if (usr.assigned_device_id) { %>
+                  <span style="font-family: monospace; font-weight: 600;"><%= usr.device_sn %></span>
+                  <div style="font-size: 10px; color: var(--text-secondary);"><%= usr.assigned_device_id %></div>
+                <% } else { %>
+                  <span style="color: var(--text-secondary); font-style: italic;">Tidak Ada Tautan</span>
+                <% } %>
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="btn btn-secondary" onclick="editUser('<%= usr.id %>', '<%= usr.username %>', '<%= usr.role %>', '<%= usr.name %>', '<%= usr.assigned_device_id || '' %>', '<%= usr.phone || '' %>')" style="padding: 4px 8px; font-size: 12px;">
+                    Edit
+                  </button>
+                  <% if (usr.id !== user.id) { %>
+                    <form action="/admin/users/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pengguna ini?');">
+                      <input type="hidden" name="id" value="<%= usr.id %>">
+                      <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">
+                        Hapus
+                      </button>
+                    </form>
+                  <% } else { %>
+                    <span style="font-size: 11px; color: var(--text-secondary); font-style: italic; padding: 4px 8px;">Akun Aktif</span>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right Side: Create/Edit Form -->
+  <div class="glass-card" style="height: fit-content;">
+    <h2 id="formTitle" style="font-size: 16px; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+      Tambah Akun Pengguna
+    </h2>
+
+    <form action="/admin/users" method="POST">
+      <input type="hidden" name="id" id="userId">
+
+      <div class="form-group">
+        <label for="name" class="form-label">Nama Lengkap</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="Contoh: Muhammad Ali" required>
+      </div>
+
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" id="username" name="username" class="form-control" placeholder="Contoh: muhammad_ali" required>
+      </div>
+
+      <div class="form-group">
+        <label for="phone" class="form-label">No. WhatsApp</label>
+        <input type="text" id="phone" name="phone" class="form-control" placeholder="Contoh: 628123456789">
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Gunakan kode negara (62). Digunakan oleh bot WhatsApp self-service.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label" id="passwordLabel">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Masukkan password" required>
+      </div>
+
+      <div class="form-group">
+        <label for="role" class="form-label">Role Akses</label>
+        <select id="role" name="role" class="form-control form-select" onchange="toggleDeviceSelector()">
+          <option value="customer" selected>Pelanggan (Hanya lihat ONU sendiri)</option>
+          <option value="admin">Administrator (Akses penuh admin panel)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="device-select-group">
+        <label for="assigned_device_id" class="form-label">Tautkan Perangkat ONU</label>
+        <select id="assigned_device_id" name="assigned_device_id" class="form-control form-select">
+          <option value="">-- Tidak Ada Perangkat --</option>
+          <% for (const dev of devices) { %>
+            <option value="<%= dev.id %>"><%= dev.serial_number %> (<%= dev.manufacturer %>)<%= dev.pppoeUser ? ' - PPPoE: ' + dev.pppoeUser : '' %></option>
+          <% } %>
+        </select>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Akun pelanggan harus ditautkan ke satu Serial Number ONU agar dapat login.</p>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Simpan</button>
+        <button type="button" id="cancelBtn" class="btn btn-secondary" onclick="resetForm()" style="display: none;">Batal</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script>
+  function toggleDeviceSelector() {
+    const role = document.getElementById('role').value;
+    const devGroup = document.getElementById('device-select-group');
+    if (role === 'admin') {
+      devGroup.style.display = 'none';
+      document.getElementById('assigned_device_id').value = '';
+    } else {
+      devGroup.style.display = 'block';
+    }
+  }
+
+  function editUser(id, username, role, name, assignedDeviceId, phone) {
+    document.getElementById('formTitle').innerText = 'Edit Akun Pengguna';
+    document.getElementById('userId').value = id;
+    document.getElementById('name').value = name;
+    document.getElementById('username').value = username;
+    document.getElementById('phone').value = phone || '';
+    document.getElementById('role').value = role;
+    document.getElementById('assigned_device_id').value = assignedDeviceId;
+    
+    // Make password optional during edit
+    document.getElementById('password').required = false;
+    document.getElementById('password').placeholder = 'Kosongkan jika tidak diganti';
+    document.getElementById('passwordLabel').innerText = 'Password Baru (Opsional)';
+    
+    document.getElementById('cancelBtn').style.display = 'inline-flex';
+    toggleDeviceSelector();
+  }
+
+  function resetForm() {
+    document.getElementById('formTitle').innerText = 'Tambah Akun Pengguna';
+    document.getElementById('userId').value = '';
+    document.getElementById('name').value = '';
+    document.getElementById('username').value = '';
+    document.getElementById('phone').value = '';
+    
+    document.getElementById('password').value = '';
+    document.getElementById('password').required = true;
+    document.getElementById('password').placeholder = 'Masukkan password';
+    document.getElementById('passwordLabel').innerText = 'Password';
+
+    document.getElementById('role').value = 'customer';
+    document.getElementById('assigned_device_id').value = '';
+
+    document.getElementById('cancelBtn').style.display = 'none';
+    toggleDeviceSelector();
+  }
+
+  // Initial setup trigger
+  toggleDeviceSelector();
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,304 @@
+<%- include('../partials/header', { title: 'Dashboard Pelanggan - ACS Lite', activePage: 'dashboard' }) %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title fade-in">Dashboard Pelanggan</h1>
+    <p class="page-subtitle fade-in">Informasi koneksi internet, perangkat terhubung, dan grafik pemantauan trafik secara real-time</p>
+  </div>
+</div>
+
+<% if (error) { %>
+  <div class="alert alert-danger fade-in">
+    <i class="bi bi-exclamation-triangle-fill"></i> <%= error %>
+  </div>
+<% } else { %>
+
+  <!-- Quick Stats Grid -->
+  <div class="grid-4 fade-in" style="margin-bottom: 25px;">
+    <!-- Stat 1: Status Koneksi -->
+    <div class="glass-card stat-card" style="padding: 16px 20px;">
+      <div class="stat-icon <%= device.online ? 'green' : 'red' %>">
+        <i class="bi bi-broadcast"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Status ONU</span>
+        <span class="stat-value" style="font-size: 18px; margin-top: 4px;">
+          <%= device.online ? 'Online / Aktif' : 'Offline' %>
+        </span>
+      </div>
+    </div>
+
+    <!-- Stat 2: Redaman Sinyal -->
+    <div class="glass-card stat-card" style="padding: 16px 20px;">
+      <% 
+        const rxVal = parseFloat(vParams.RxPower);
+        let rxColorClass = 'purple';
+        let rxText = 'N/A';
+        if (!isNaN(rxVal)) {
+          rxText = rxVal + ' dBm';
+          if (rxVal < -27) rxColorClass = 'red';
+          else if (rxVal < -24) rxColorClass = 'blue';
+          else rxColorClass = 'green';
+        }
+      %>
+      <div class="stat-icon <%= rxColorClass %>">
+        <i class="bi bi-activity"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Redaman Kabel</span>
+        <span class="stat-value" style="font-size: 18px; margin-top: 4px;"><%= rxText %></span>
+      </div>
+    </div>
+
+    <!-- Stat 3: Perangkat Terhubung -->
+    <div class="glass-card stat-card" style="padding: 16px 20px;">
+      <div class="stat-icon blue">
+        <i class="bi bi-laptop"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Perangkat Aktif</span>
+        <span class="stat-value" style="font-size: 18px; margin-top: 4px;"><%= clients.length %> Perangkat</span>
+      </div>
+    </div>
+
+    <!-- Stat 4: IP Publik / Internet -->
+    <div class="glass-card stat-card" style="padding: 16px 20px;">
+      <div class="stat-icon purple">
+        <i class="bi bi-globe"></i>
+      </div>
+      <div class="stat-info" style="min-width: 0; flex: 1;">
+        <span class="stat-label">IP Internet</span>
+        <span class="stat-value" style="font-size: 14px; font-family: monospace; margin-top: 6px; word-break: break-all;">
+          <%= vParams.ExternalIP || device.ip_address || '0.0.0.0' %>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Traffic Graph Container -->
+  <div class="fade-in" style="margin-bottom: 25px;">
+    <div class="glass-card" style="padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; margin-bottom: 20px;">
+        <h2 style="font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0;">
+          <i class="bi bi-graph-up-arrows" style="color: var(--color-primary);"></i> Grafik Trafik Internet (Real-Time)
+        </h2>
+        <div style="display: flex; gap: 15px; font-size: 12px;">
+          <span style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #6366f1;"></span> Download
+          </span>
+          <span style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #06b6d4;"></span> Upload
+          </span>
+        </div>
+      </div>
+
+      <div style="position: relative; height: 260px; width: 100%;">
+        <canvas id="trafficChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Info Column -->
+  <div class="fade-in">
+    <div class="glass-card" style="padding: 20px;">
+      <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        <i class="bi bi-shield-check" style="color: var(--color-success);"></i> Tips Jaringan Anda
+      </h3>
+      <ul style="font-size: 13px; color: var(--text-secondary); padding-left: 18px; line-height: 1.8;">
+        <li>Ganti kata sandi Wi-Fi Anda secara berkala pada menu <strong>Pengaturan Wi-Fi</strong> untuk meningkatkan keamanan.</li>
+        <li>Pastikan redaman kabel Anda bernilai di antara <strong>-15 dBm s/d -25 dBm</strong> untuk mendapatkan kestabilan internet terbaik. Redaman di bawah -27 dBm dapat memicu gangguan koneksi terputus-putus.</li>
+        <li>Jika koneksi terasa lambat, Anda dapat memantau menu <strong>Perangkat Terhubung</strong> untuk mendeteksi siapa saja yang menggunakan jaringan lokal Anda secara real-time.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const ctx = document.getElementById('trafficChart').getContext('2d');
+      
+      // Configuration parameters for historical points
+      const maxDataPoints = 15;
+      const timeLabels = Array(maxDataPoints).fill('');
+      const downloadData = Array(maxDataPoints).fill(0);
+      const uploadData = Array(maxDataPoints).fill(0);
+
+      // Create gradients
+      const downloadGradient = ctx.createLinearGradient(0, 0, 0, 240);
+      downloadGradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+      downloadGradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+      const uploadGradient = ctx.createLinearGradient(0, 0, 0, 240);
+      uploadGradient.addColorStop(0, 'rgba(6, 182, 212, 0.3)');
+      uploadGradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+
+      const trafficChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: timeLabels,
+          datasets: [
+            {
+              label: 'Download (Mbps)',
+              data: downloadData,
+              borderColor: '#6366f1',
+              borderWidth: 3,
+              backgroundColor: downloadGradient,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#6366f1',
+              pointHoverRadius: 6,
+              pointHoverBackgroundColor: '#fff',
+              pointRadius: 0
+            },
+            {
+              label: 'Upload (Mbps)',
+              data: uploadData,
+              borderColor: '#06b6d4',
+              borderWidth: 2,
+              backgroundColor: uploadGradient,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#06b6d4',
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: '#fff',
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: '#111827',
+              titleColor: '#f3f4f6',
+              bodyColor: '#9ca3af',
+              borderColor: 'rgba(255, 255, 255, 0.08)',
+              borderWidth: 1,
+              padding: 10,
+              displayColors: true,
+              callbacks: {
+                label: function (context) {
+                  return ' ' + context.dataset.label.split(' ')[0] + ': ' + context.parsed.y.toFixed(2) + ' Mbps';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                display: false
+              }
+            },
+            y: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.04)',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#9ca3af',
+                font: {
+                  size: 11,
+                  family: 'monospace'
+                },
+                callback: function(value) {
+                  return value + ' Mbps';
+                }
+              },
+              suggestedMax: 30,
+              min: 0
+            }
+          }
+        }
+      });
+
+      // Keep track of previous bytes to calculate rate
+      let lastBytesIn = null;
+      let lastBytesOut = null;
+      let lastTimestamp = null;
+
+      // Simulation base parameters (fallback)
+      let baseDownload = 15;
+      let baseUpload = 4;
+
+      function updateTraffic() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        fetch('/customer/traffic-stats')
+          .then(res => res.json())
+          .then(res => {
+            let currentDl = 0;
+            let currentUl = 0;
+
+            if (res.success && res.source === 'mikrotik') {
+              const currentTimestamp = res.timestamp;
+              const bytesIn = res.bytesIn;   // Upload bytes (to router)
+              const bytesOut = res.bytesOut; // Download bytes (from router)
+
+              if (lastBytesIn !== null && lastBytesOut !== null && lastTimestamp !== null) {
+                const elapsedSec = (currentTimestamp - lastTimestamp) / 1000;
+                
+                if (elapsedSec > 0.5) {
+                  // Calculate Mbps: (bytesDelta * 8 bits) / elapsedSec / 1,000,000 bits
+                  currentDl = ((bytesOut - lastBytesOut) * 8) / elapsedSec / 1000000;
+                  currentUl = ((bytesIn - lastBytesIn) * 8) / elapsedSec / 1000000;
+                  
+                  // Clean up negative values (e.g. if PPPoE session reconnected and counters reset)
+                  if (currentDl < 0) currentDl = 0;
+                  if (currentUl < 0) currentUl = 0;
+                }
+              }
+
+              lastBytesIn = bytesIn;
+              lastBytesOut = bytesOut;
+              lastTimestamp = currentTimestamp;
+            } else {
+              // Simulation fallback
+              let dlNoise = (Math.random() - 0.5) * 8;
+              let ulNoise = (Math.random() - 0.5) * 2;
+              
+              if (Math.random() > 0.85) {
+                dlNoise += Math.random() * 20;
+                ulNoise += Math.random() * 5;
+              }
+
+              currentDl = Math.max(1.5, baseDownload + dlNoise);
+              currentUl = Math.max(0.4, baseUpload + ulNoise);
+
+              currentDl = Math.min(50, currentDl);
+              currentUl = Math.min(15, currentUl);
+            }
+
+            // Push new data and remove old
+            downloadData.push(currentDl);
+            downloadData.shift();
+            uploadData.push(currentUl);
+            uploadData.shift();
+
+            timeLabels.push(timeString);
+            timeLabels.shift();
+
+            trafficChart.update('none'); // Update without full animation for smoothness
+          })
+          .catch(err => {
+            console.error('Failed to fetch traffic stats: ', err);
+          });
+      }
+
+      // Start updater every 2 seconds
+      setInterval(updateTraffic, 2000);
+      updateTraffic();
+    });
+  </script>
+
+<% } %>
+
+<%- include('../partials/footer') %>

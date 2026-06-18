@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'ACS Lite Management' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <!-- Chart.js for premium dynamic graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <div class="wrapper">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-brand">
+        <i class="bi bi-router"></i> ACS LITE
+      </div>
+      
+      <ul class="sidebar-menu">
+        <% if (user.role === 'admin') { %>
+          <li>
+            <a href="/admin/dashboard" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'dashboard' ? 'active' : '' %>">
+              <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="/admin/devices" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'devices' ? 'active' : '' %>">
+              <i class="bi bi-cpu"></i> Perangkat ONU
+            </a>
+          </li>
+          <li>
+            <a href="/admin/virtual-params" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'virtual-params' ? 'active' : '' %>">
+              <i class="bi bi-sliders"></i> Virtual Parameter
+            </a>
+          </li>
+          <li>
+            <a href="/admin/users" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'users' ? 'active' : '' %>">
+              <i class="bi bi-people"></i> Pengguna / Client
+            </a>
+          </li>
+          <li>
+            <a href="/admin/settings" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'settings' ? 'active' : '' %>">
+              <i class="bi bi-gear"></i> Pengaturan
+            </a>
+          </li>
+        <% } else { %>
+          <li>
+            <a href="/customer/dashboard" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'dashboard' ? 'active' : '' %>">
+              <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="/customer/wifi" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'wifi' ? 'active' : '' %>">
+              <i class="bi bi-wifi"></i> Pengaturan Wi-Fi
+            </a>
+          </li>
+          <li>
+            <a href="/customer/connection" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'connection' ? 'active' : '' %>">
+              <i class="bi bi-info-circle"></i> Status Koneksi
+            </a>
+          </li>
+          <li>
+            <a href="/customer/devices" class="sidebar-link <%= typeof activePage !== 'undefined' && activePage === 'devices' ? 'active' : '' %>">
+              <i class="bi bi-laptop"></i> Perangkat Tersambung <%= (typeof clients !== 'undefined' && clients && clients.length > 0) ? '(' + clients.length + ')' : '' %>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+
+      <div class="sidebar-footer">
+        <a href="/logout" class="sidebar-link" style="color: var(--color-danger);">
+          <i class="bi bi-box-arrow-left"></i> Keluar
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">

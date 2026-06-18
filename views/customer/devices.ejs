@@ -1,0 +1,56 @@
+<%- include('../partials/header', { title: 'Perangkat Terhubung - ACS Lite', activePage: 'devices' }) %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title fade-in">Perangkat Terhubung</h1>
+    <p class="page-subtitle fade-in">Daftar semua perangkat yang aktif di jaringan Wi-Fi lokal Anda</p>
+  </div>
+</div>
+
+<% if (error) { %>
+  <div class="alert alert-danger fade-in">
+    <i class="bi bi-exclamation-triangle-fill"></i> <%= error %>
+  </div>
+<% } else { %>
+
+  <div class="fade-in">
+    <!-- Connected Devices Card (Always visible on all screen sizes) -->
+    <div class="glass-card" style="padding: 24px; display: flex; flex-direction: column;">
+      <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span><i class="bi bi-laptop"></i> Perangkat Terhubung (Live)</span>
+        <span class="badge badge-info" style="font-size: 12px; padding: 6px 14px;"><%= clients.length %> Perangkat</span>
+      </h2>
+
+      <% if (clients.length === 0) { %>
+        <div style="text-align: center; color: var(--text-secondary); padding: 50px 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px;">
+          <i class="bi bi-wifi-off" style="font-size: 48px; opacity: 0.4; color: var(--color-danger);"></i>
+          <span style="font-size: 14px;">Tidak ada perangkat terdeteksi di jaringan Wi-Fi lokal.</span>
+        </div>
+      <% } else { %>
+        <div class="table-container" style="margin-bottom: 0;">
+          <table class="custom-table" style="font-size: 14px; width: 100%;">
+            <thead>
+              <tr style="font-size: 12px;">
+                <th style="padding: 14px 20px;">Nama Perangkat</th>
+                <th style="padding: 14px 20px;">IP Address</th>
+                <th style="padding: 14px 20px;">MAC Address</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const client of clients) { %>
+                <tr>
+                  <td style="padding: 16px 20px; font-weight: 600; color: var(--color-primary);"><%= client.hostname %></td>
+                  <td style="padding: 16px 20px; font-family: monospace;"><%= client.ip %></td>
+                  <td style="padding: 16px 20px; font-family: monospace; color: var(--text-secondary);"><%= client.mac %></td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+<% } %>
+
+<%- include('../partials/footer') %>

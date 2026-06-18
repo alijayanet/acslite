@@ -1,0 +1,109 @@
+<%- include('../partials/header', { title: 'Pengaturan Wi-Fi - ACS Lite', activePage: 'wifi' }) %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title fade-in">Pengaturan Wi-Fi</h1>
+    <p class="page-subtitle fade-in">Ubah nama Wi-Fi (SSID) dan ganti password perangkat ONU Anda</p>
+  </div>
+</div>
+
+<% if (error) { %>
+  <div class="alert alert-danger fade-in">
+    <i class="bi bi-exclamation-triangle-fill"></i> <%= error %>
+  </div>
+<% } else { %>
+
+  <!-- Success Notification -->
+  <div id="successAlert" class="alert alert-success fade-in" style="display: none;">
+    <i class="bi bi-check-circle-fill"></i> Pengaturan Wi-Fi baru berhasil dikirim ke perangkat ONU Anda! Perubahan biasanya diterapkan dalam 5-15 detik.
+  </div>
+
+  <div class="fade-in">
+    <!-- Wi-Fi Form Configuration -->
+    <div class="glass-card">
+      <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+        <i class="bi bi-wifi"></i> Konfigurasi Nama & Password Wi-Fi
+      </h2>
+
+      <!-- Form 1: Ganti Nama Wi-Fi (SSID) -->
+      <form action="/customer/dashboard/wifi" method="POST" style="margin-bottom: 30px;">
+        <h3 style="font-size: 14px; font-weight: 600; color: var(--color-primary); margin-bottom: 15px;">
+          <i class="bi bi-tag-fill"></i> Pengaturan Nama Wi-Fi (SSID)
+        </h3>
+        
+        <div class="form-group">
+          <label for="wifiSSID24" class="form-label">Nama Wi-Fi 2.4 GHz</label>
+          <input type="text" id="wifiSSID24" name="wifiSSID24" class="form-control" placeholder="Nama Wi-Fi Anda" value="<%= vParams.WifiSSID24 || '' %>" required>
+        </div>
+
+        <% if (vParams.hasOwnProperty('WifiSSID5') && vParams.WifiSSID5 !== null) { %>
+          <div class="form-group">
+            <label for="wifiSSID5" class="form-label">Nama Wi-Fi 5 GHz (Dual Band)</label>
+            <input type="text" id="wifiSSID5" name="wifiSSID5" class="form-control" placeholder="Nama Wi-Fi 5G Anda" value="<%= vParams.WifiSSID5 || '' %>">
+          </div>
+        <% } %>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 10px;">
+          Simpan Nama Wi-Fi <i class="bi bi-save"></i>
+        </button>
+      </form>
+
+      <!-- Form 2: Ganti Kata Sandi Wi-Fi (Password) -->
+      <form action="/customer/dashboard/wifi" method="POST" style="border-top: 1px solid var(--glass-border); padding-top: 25px; margin-top: 25px;">
+        <h3 style="font-size: 14px; font-weight: 600; color: var(--color-info); margin-bottom: 15px;">
+          <i class="bi bi-key-fill"></i> Pengaturan Kata Sandi Wi-Fi
+        </h3>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label for="wifiPass24" class="form-label">Sandi Wi-Fi 2.4 GHz (Min. 8 Karakter)</label>
+          <div style="position: relative;">
+            <input type="password" id="wifiPass24" name="wifiPass24" class="form-control" placeholder="Sandi baru Wi-Fi" value="<%= vParams.WifiPass24 || '' %>" minlength="8" required style="padding-right: 40px;">
+            <button type="button" class="btn-toggle-pass" onclick="togglePassField('wifiPass24')" style="position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--text-secondary); cursor: pointer;">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <% if (vParams.hasOwnProperty('WifiPass5') && vParams.WifiPass5 !== null) { %>
+          <div class="form-group" style="margin-bottom: 25px;">
+            <label for="wifiPass5" class="form-label">Sandi Wi-Fi 5 GHz (Min. 8 Karakter)</label>
+            <div style="position: relative;">
+              <input type="password" id="wifiPass5" name="wifiPass5" class="form-control" placeholder="Sandi baru Wi-Fi 5G" value="<%= vParams.WifiPass5 || '' %>" minlength="8" style="padding-right: 40px;">
+              <button type="button" class="btn-toggle-pass" onclick="togglePassField('wifiPass5')" style="position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--text-secondary); cursor: pointer;">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+        <% } %>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">
+          Simpan Kata Sandi <i class="bi bi-save"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+<% } %>
+
+<script>
+  function togglePassField(fieldId) {
+    const field = document.getElementById(fieldId);
+    const btnIcon = field.nextElementSibling.querySelector('i');
+    if (field.type === 'password') {
+      field.type = 'text';
+      btnIcon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+      field.type = 'password';
+      btnIcon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (window.location.search.includes('success=1')) {
+      document.getElementById('successAlert').style.display = 'block';
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  });
+</script>
+
+<%- include('../partials/footer') %>

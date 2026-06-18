@@ -1,0 +1,141 @@
+<%- include('../partials/header', { title: 'Parameter Virtual - ACS Lite', activePage: 'virtual-params' }) %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title fade-in">Virtual Parameter Dinamis</h1>
+    <p class="page-subtitle fade-in">Petakan parameter ramah sistem Anda (misal RxPower) ke beberapa path TR-069 vendor (Huawei, ZTE, dll)</p>
+  </div>
+</div>
+
+<div class="dashboard-grid grid-mobile-reverse fade-in">
+  
+  <!-- Left Side: List of current virtual parameters -->
+  <div class="glass-card" style="padding: 0;">
+    <div class="table-container" style="border: none; margin-bottom: 0;">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Nama Parameter</th>
+            <th>Type</th>
+            <th>Writable</th>
+            <th>Daftar Path TR-069 Vendor (JSON)</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (const param of params) { %>
+            <tr>
+              <td>
+                <strong style="color: var(--color-primary);"><%= param.name %></strong>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;"><%= param.description || '-' %></div>
+              </td>
+              <td>
+                <span class="badge badge-info"><%= param.type %></span>
+              </td>
+              <td>
+                <% if (param.is_writable === 1) { %>
+                  <span class="badge badge-success">Ya</span>
+                <% } else { %>
+                  <span class="badge badge-warning">Tidak</span>
+                <% } %>
+              </td>
+              <td style="font-family: monospace; font-size: 11px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= param.paths %>">
+                <%= param.paths %>
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="btn btn-secondary" onclick="editParam('<%= param.id %>', '<%= param.name %>', '<%= escape(param.paths) %>', '<%= param.type %>', '<%= param.is_writable %>', '<%= param.description %>')" style="padding: 4px 8px; font-size: 12px;">
+                    Edit
+                  </button>
+                  <form action="/admin/virtual-params/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus virtual parameter ini?');">
+                    <input type="hidden" name="id" value="<%= param.id %>">
+                    <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">
+                      Hapus
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right Side: Add / Edit Form -->
+  <div class="glass-card" style="height: fit-content;">
+    <h2 id="formTitle" style="font-size: 16px; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+      Tambah Parameter Virtual
+    </h2>
+    
+    <form action="/admin/virtual-params" method="POST">
+      <input type="hidden" name="id" id="paramId">
+      
+      <div class="form-group">
+        <label for="name" class="form-label">Nama Parameter (Unik)</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="Contoh: RxPower" required>
+      </div>
+
+      <div class="form-group">
+        <label for="type" class="form-label">Tipe Data</label>
+        <select id="type" name="type" class="form-control form-select">
+          <option value="string">String (Text)</option>
+          <option value="number">Number (Integer/Float)</option>
+          <option value="boolean">Boolean (True/False)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" name="is_writable" id="is_writable" value="1" style="accent-color: var(--color-primary); width: 16px; height: 16px;">
+          Writable (Dapat diubah oleh pelanggan/admin)
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="paths" class="form-label">Daftar Path TR-069 Vendor (JSON Array)</label>
+        <textarea id="paths" name="paths" class="form-control" rows="5" placeholder='["InternetGatewayDevice.WANDevice.1.X_HW_GponInterfaceConfig.RxPower", "Device.Optical.Interface.1.OpticalSignalLevel"]' required style="font-family: monospace; font-size: 11px;"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 25px;">
+        <label for="description" class="form-label">Deskripsi</label>
+        <input type="text" id="description" name="description" class="form-control" placeholder="Deskripsi parameter">
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Simpan</button>
+        <button type="button" id="cancelBtn" class="btn btn-secondary" onclick="resetForm()" style="display: none;">Batal</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script>
+  function editParam(id, name, pathsEscaped, type, isWritable, description) {
+    document.getElementById('formTitle').innerText = 'Edit Parameter Virtual';
+    document.getElementById('paramId').value = id;
+    document.getElementById('name').value = name;
+    document.getElementById('paths').value = unescape(pathsEscaped);
+    document.getElementById('type').value = type;
+    document.getElementById('is_writable').checked = (isWritable === '1' || isWritable === 1);
+    document.getElementById('description').value = description;
+    
+    document.getElementById('cancelBtn').style.display = 'inline-flex';
+  }
+
+  function resetForm() {
+    document.getElementById('formTitle').innerText = 'Tambah Parameter Virtual';
+    document.getElementById('paramId').value = '';
+    document.getElementById('name').value = '';
+    document.getElementById('paths').value = '';
+    document.getElementById('type').value = 'string';
+    document.getElementById('is_writable').checked = false;
+    document.getElementById('description').value = '';
+    
+    document.getElementById('cancelBtn').style.display = 'none';
+  }
+</script>
+
+<%- include('../partials/footer') %>
